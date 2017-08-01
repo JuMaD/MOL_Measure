@@ -11,5 +11,4 @@ So far the following setups are supported by the software:
 
 Julian M. Dlugosch (julian.dlugosch@tum.de)
 
-##blabla
-still testing a lot in git
+
