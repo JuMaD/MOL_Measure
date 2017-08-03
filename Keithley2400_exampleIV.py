@@ -95,8 +95,15 @@ class MainWindow(ManagedWindow):
         results = Results(procedure, filename)
         #call new_experiment to construct a new Experiment (=convinient container) from the results, curve and browser_item
         experiment = self.new_experiment(results)
+        #if its the first experiment don't start it right away
+        if not self.manager.experiments.queue:
+            self.manager._start_on_add = False
+            self.manager.queue(experiment)
+            self.manager._is_continuous = False
+
         #add experiment to que
-        self.manager.queue(experiment)
+        else:
+            self.manager.queue(experiment)
 
 
 if __name__ == "__main__":
