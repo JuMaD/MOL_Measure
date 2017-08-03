@@ -12,35 +12,38 @@ from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
 class IVProcedure(Procedure):
-
+    instrument_adress = "GPIB::4"
     data_points = IntegerParameter('Data points', default=50)
     averages = IntegerParameter('Averages', default=50)
-    max_current = FloatParameter('Maximum Current', units='A', default=0.01)
-    min_current = FloatParameter('Minimum Current', units='A', default=-0.01)
+    max_voltage = FloatParameter('Maximum Voltage', units='V', default=0.01)
+    min_voltage = FloatParameter('Minimum Voltage', units='V', default=-0.01)
 
-    DATA_COLUMNS = ['Current (A)', 'Voltage (V)', 'Voltage Std (V)']
+    voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+
+    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)']
 
     def startup(self):
         log.info("Connecting and configuring the instrument")
-        self.sourcemeter = Keithley2400("GPIB::4")
+        self.sourcemeter = Keithley2400(instrument_adress)
         self.sourcemeter.reset()
         self.sourcemeter.use_front_terminals()
-        self.sourcemeter.measure_voltage()
-        self.sourcemeter.config_current_source()
+        self.sourcemeter.measure_current()
+        self.sourcemeter.config_voltage_source()
         sleep(0.1) # wait here to give the instrument time to react
         self.sourcemeter.set_buffer(averages)
 
     def execute(self):
-        currents = np.linspace(
-            self.min_current,
-            self.max_current,
+        self.data_points =  np.ceil((self.max_voltage-self.min_voltage)/self.voltage_step)
+        voltages = np.linspace(
+            self.min_voltage,
+            self.max_voltage,
             num=self.data_points
         )
 
         # Loop through each current point, measure and record the voltage
-        for current in currents:
-            log.info("Setting the current to %g A" % current)
-            self.sourcemeter.current = current
+        for voltage in voltages:
+            log.info("Setting the voltage to %g V" % voltage)
+            self.sourcemeter.voltage = voltage
             self.sourcemeter.reset_buffer()
             sleep(0.1)
             self.sourcemeter.start_buffer()
@@ -48,9 +51,9 @@ class IVProcedure(Procedure):
             self.sourcemeter.wait_for_buffer()
 
             self.emit('results', {
-                'Current (A)': current,
-                'Voltage (V)': self.sourcemeter.means,
-                'Voltage Std (V)': self.sourcemeter.standard_devs
+                'Current (A)': self.sourcemeter.means,
+                'Voltage (V)': voltage,
+                'Current Std (A)': self.sourcemeter.standard_devs
             })
             sleep(0.01)
             if self.should_stop():
@@ -66,20 +69,23 @@ class MainWindow(ManagedWindow):
     def __init__(self):
         super(MainWindow, self).__init__(
             procedure_class=IVProcedure,
-            inputs=['data_points', 'averages', 'max_current', 'min_current'],
-            displays=['data_points', 'averages', 'max_current', 'min_current'],
+            inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step'],
+            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', ''],
             x_axis='Voltage',
             y_axis='Current'
         )
         self.setWindowTitle('Mol_measure 0.0.1')
 
     def queue(self):
+        #make a temporary file
         filename = tempfile.mktemp()
-
+        #call make_procdure from ManagedWindow to construct a new instance of procedure_class
         procedure = self.make_procedure()
+        #construct a new instance of Results
         results = Results(procedure, filename)
+        #call new_experiment to construct a new Experiment (=convinient container) from the results, curve and browser_item
         experiment = self.new_experiment(results)
-
+        #add experiment to que
         self.manager.queue(experiment)
 
 
