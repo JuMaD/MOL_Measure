@@ -4,6 +4,8 @@ from pymeasure.experiment import Procedure
 from pymeasure.experiment import IntegerParameter, FloatParameter
 from time import sleep
 import sys
+import tempfile
+import numpy as np
 
 from pymeasure.log import console_log
 from pymeasure.display.Qt import QtGui
@@ -13,19 +15,22 @@ from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
 class IVProcedure(Procedure):
     instrument_adress = "GPIB::4"
-    data_points = IntegerParameter('Data points', default=50)
+
     averages = IntegerParameter('Averages', default=50)
-    max_voltage = FloatParameter('Maximum Voltage', units='V', default=0.01)
-    min_voltage = FloatParameter('Minimum Voltage', units='V', default=-0.01)
+    max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
+    min_voltage = FloatParameter('Minimum Voltage', units='V', default=-1)
 
     voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+    data_points = IntegerParameter('Data points',
+                                   default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
 
     DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)']
+
 
     def startup(self):
         log.info("Connecting and configuring the instrument")
         self.sourcemeter = Keithley2400(instrument_adress)
-        self.sourcemeter.reset()
+        #self.sourcemeter.reset()
         self.sourcemeter.use_front_terminals()
         self.sourcemeter.measure_current()
         self.sourcemeter.config_voltage_source()
@@ -33,7 +38,7 @@ class IVProcedure(Procedure):
         self.sourcemeter.set_buffer(averages)
 
     def execute(self):
-        self.data_points =  np.ceil((self.max_voltage-self.min_voltage)/self.voltage_step)
+
         voltages = np.linspace(
             self.min_voltage,
             self.max_voltage,
@@ -70,17 +75,22 @@ class MainWindow(ManagedWindow):
         super(MainWindow, self).__init__(
             procedure_class=IVProcedure,
             inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step'],
-            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', ''],
-            x_axis='Voltage',
-            y_axis='Current'
+            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'data_points'],
+            x_axis='Voltage (V)',
+            y_axis='Current (A)'
         )
         self.setWindowTitle('Mol_measure 0.0.1')
-
+    #override queue fuction of managed window that gets executed upon clicking on 'Queue'
     def queue(self):
         #make a temporary file
         filename = tempfile.mktemp()
-        #call make_procdure from ManagedWindow to construct a new instance of procedure_class
+        #call make_procedure from ManagedWindow to construct a new instance of procedure_class
         procedure = self.make_procedure()
+
+        #calculate number of datapoints
+        procedure.data_points = np.ceil((procedure.max_voltage - procedure.min_voltage) / procedure.voltage_step)
+
+
         #construct a new instance of Results
         results = Results(procedure, filename)
         #call new_experiment to construct a new Experiment (=convinient container) from the results, curve and browser_item
