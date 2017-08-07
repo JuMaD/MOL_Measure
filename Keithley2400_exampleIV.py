@@ -13,14 +13,18 @@ from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
-class IVProcedure(Procedure):
+class IVCycles(Procedure):
     instrument_adress = "GPIB::4"
 
     averages = IntegerParameter('Averages', default=50)
     max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
     min_voltage = FloatParameter('Minimum Voltage', units='V', default=-1)
+    compliance = FloatParameter('Compliance', units='A', default=0.1)
+
+    cycles = IntegerParameter('#Cycles', default=1)
 
     voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+    #Calculate the number of data points from range and step
     data_points = IntegerParameter('Data points',
                                    default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
 
@@ -29,41 +33,44 @@ class IVProcedure(Procedure):
 
     def startup(self):
         log.info("Connecting and configuring the instrument")
-        self.sourcemeter = Keithley2400(instrument_adress)
-        #self.sourcemeter.reset()
+        self.sourcemeter = Keithley2400(self.instrument_adress)
+        self.sourcemeter.reset()
+        #setting source mode to voltage, defining range and compliance
+        self.sourcemeter.apply_voltage([-20,20],self.compliance)
         self.sourcemeter.use_front_terminals()
         self.sourcemeter.measure_current()
-        self.sourcemeter.config_voltage_source()
         sleep(0.1) # wait here to give the instrument time to react
-        self.sourcemeter.set_buffer(averages)
+        self.sourcemeter.buffer_points = averages
 
     def execute(self):
 
         voltages = np.linspace(
-            self.min_voltage,
-            self.max_voltage,
-            num=self.data_points
+            self.min_voltage.value,
+            self.max_voltage.value,
+            num=self.data_points.value
         )
+        #Loop through cycles
+        for cycle in xrange(cycles.value):
+            # Loop through each voltage point, measure and record the current
+            for voltage in voltages:
+                log.info("Setting the voltage to %g V" % voltage)
+                self.sourcemeter.source_voltage = voltage
 
-        # Loop through each current point, measure and record the voltage
-        for voltage in voltages:
-            log.info("Setting the voltage to %g V" % voltage)
-            self.sourcemeter.voltage = voltage
-            self.sourcemeter.reset_buffer()
-            sleep(0.1)
-            self.sourcemeter.start_buffer()
-            log.info("Waiting for the buffer to fill with measurements")
-            self.sourcemeter.wait_for_buffer()
-
-            self.emit('results', {
-                'Current (A)': self.sourcemeter.means,
-                'Voltage (V)': voltage,
-                'Current Std (A)': self.sourcemeter.standard_devs
-            })
-            sleep(0.01)
-            if self.should_stop():
-                log.info("User aborted the procedure")
-                break
+                self.sourcemeter.reset_buffer()
+                sleep(0.1)
+                self.sourcemeter.start_buffer()
+                log.info("Waiting for the buffer to fill with measurements")
+                self.sourcemeter.wait_for_buffer()
+                self.emit('results', {
+                    'Current (A)': self.sourcemeter.means,
+                    'Voltage (V)': voltage,
+                    'Current Std (A)': self.sourcemeter.standard_devs,
+                    'Cycle': i
+                })
+                sleep(0.01)
+                if self.should_stop():
+                    log.info("User aborted the procedure")
+                    break
 
     def shutdown(self):
         self.sourcemeter.shutdown()
@@ -73,9 +80,9 @@ class MainWindow(ManagedWindow):
 
     def __init__(self):
         super(MainWindow, self).__init__(
-            procedure_class=IVProcedure,
-            inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step'],
-            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'data_points'],
+            procedure_class=IVCycles,
+            inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'compliance', 'cycles'],
+            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'data_points', 'compliance'],
             x_axis='Voltage (V)',
             y_axis='Current (A)'
         )
@@ -93,13 +100,20 @@ class MainWindow(ManagedWindow):
 
         #construct a new instance of Results
         results = Results(procedure, filename)
-        #call new_experiment to construct a new Experiment (=convinient container) from the results, curve and browser_item
+        #call new_experiment to construct a new Experiment (=convinient container for reult + procedure)
         experiment = self.new_experiment(results)
         #if its the first experiment don't start it right away
         if not self.manager.experiments.queue:
             self.manager._start_on_add = False
-            self.manager.queue(experiment)
             self.manager._is_continuous = False
+            self.manager.queue(experiment)
+
+            #set the gui accordingly
+            self.abort_button.setEnabled(False)
+            self.abort_button.setText("Start")
+            self.abort_button.clicked.disconnect()
+            self.abort_button.clicked.connect(self.resume)
+            self.abort_button.setEnabled(True)
 
         #add experiment to que
         else:
