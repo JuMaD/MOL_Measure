@@ -37,7 +37,7 @@ class InstrumentList(QListWidget):
         self.itemClicked.connect(self.Clicked)
 
     def Clicked(self,item):
-        #call resource messenger
+        #pick instrument here!
         rm = visa.ResourceManager()
         instrs = rm.list_resources()
 
