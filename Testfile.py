@@ -38,10 +38,8 @@ class InstrumentList(QListWidget):
 
     def Clicked(self,item):
         #pick instrument here!
-        rm = visa.ResourceManager()
-        instrs = rm.list_resources()
-
-
+        #split item.text() string into n : instr : idn
+        #emit adress (instr)???
         QMessageBox.information(self, "Instrument Selection", "You clicked: "+item.text())
 
 
