@@ -1,67 +1,34 @@
+"""Testing GUI setup to make a list of available Instruments and Select one. VISA Manger --> QtListWidget --> ManagedWindow (ListItem)"""
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
 import sys
-import logging
-log = logging.getLogger(__name__)
-log.addHandler(logging.NullHandler())
 
-import random
-from time import sleep
-from pymeasure.log import console_log
-from pymeasure.display.Qt import QtGui
-from pymeasure.display.windows import ManagedWindow
-from pymeasure.experiment import Procedure, Results
-from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+class myListWidget(QListWidget):
 
-class RandomProcedure(Procedure):
+    def Clicked(self,item):
+        QMessageBox.information(self, "ListWidget", "You clicked: "+item.text())
 
-    iterations = IntegerParameter('Loop Iterations')
-    delay = FloatParameter('Delay Time', units='s', default=0.2)
-    seed = Parameter('Random Seed', default='12345')
+    def SelectInstrument():
 
-    DATA_COLUMNS = ['Iteration', 'Random Number']
+        listWidget = myListWidget()
 
-    def startup(self):
-        log.info("Setting the seed of the random number generator")
-        random.seed(self.seed)
+        #Resize width and height
+        listWidget.resize(300,120)
 
-    def execute(self):
-        log.info("Starting the loop of %d iterations" % self.iterations)
-        for i in range(self.iterations):
-            data = {
-                'Iteration': i,
-                'Random Number': random.random()
-            }
-            self.emit('results', data)
-            log.debug("Emitting results: %s" % data)
-            sleep(self.delay)
-            if self.should_stop():
-                log.warning("Caught the stop flag in the procedure")
-                break
+        listWidget.addItem("Item 1")
+        listWidget.addItem("Item 2")
+        listWidget.addItem("Item 3")
+        listWidget.addItem("Item 4")
+
+        listWidget.setWindowTitle('Select Instrument')
+        listWidget.itemClicked.connect(listWidget.Clicked)
+
+        listWidget.show()
 
 
-class MainWindow(ManagedWindow):
-
-    def __init__(self):
-        super(MainWindow, self).__init__(
-            procedure_class=RandomProcedure,
-            inputs=['iterations', 'delay', 'seed'],
-            displays=['iterations', 'delay', 'seed'],
-            x_axis='Iteration',
-            y_axis='Random Number'
-        )
-        self.setWindowTitle('GUI Example')
-
-    def queue(self):
-        filename = tempfile.mktemp()
-
-        procedure = self.make_procedure()
-        results = Results(procedure, filename)
-        experiment = self.new_experiment(results)
-
-        self.manager.queue(experiment)
-
-
-if __name__ == "__main__":
-    app = QtGui.QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    ListOfInstruments = myListWidget()
+    ListOfInstruments.SelectInstrument()
     sys.exit(app.exec_())

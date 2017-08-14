@@ -7,11 +7,20 @@ import sys
 import tempfile
 import numpy as np
 
+import visa
+
 from pymeasure.log import console_log
 from pymeasure.display.Qt import QtGui
 from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
+
+
+
+import multiprocessing
+
+
+
 
 class IVCycles(Procedure):
     instrument_adress = "GPIB::4"
@@ -117,10 +126,45 @@ class MainWindow(ManagedWindow):
 
         #add experiment to que
         else:
+
             self.manager.queue(experiment)
 
 
+def pick_resources():
+    #Print available resources and return them
+    #TO_DO: Make a GUI that lists all resources and makes them selectable
+    rm = visa.ResourceManager()
+    instrs = rm.list_resources()
+    for n, instr in enumerate(instrs):
+        # trying to catch errors in comunication
+        try:
+            res = rm.open_resource(instr)
+            # try to avoid errors from *idn?
+            try:
+                # noinspection PyUnresolvedReferences
+                idn = res.ask('*idn?')[:-1]
+            except visa.Error:
+                idn = "Not known"
+            finally:
+                res.close()
+                print(n, ":", instr, ":", idn)
+        except visa.VisaIOError as e:
+            print(n, ":", instr, ":", "Visa IO Error: check connections")
+            print(e)
+    #send list to QT GUI
+    #pick from list
+
+    rm.close()
+    return instrs
+
+
+
+
+
 if __name__ == "__main__":
+    #pick instrument adress and Type
+    resources = pick_resources()
+
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
     window.show()
