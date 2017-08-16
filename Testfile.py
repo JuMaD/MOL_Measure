@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import *
 import visa
 import sys
 
-class InstrumentList(QListWidget):
+class InstrumentPicker(QListWidget):
     #initialize List and populate with visa instruments
     def __init__(self):
         super().__init__()
@@ -23,11 +23,10 @@ class InstrumentList(QListWidget):
                     idn = "Not known"
                 finally:
                     res.close()
-                    self.addItem(str(n)+":"+str(instr)+":"+str(idn))
+                    self.addItem(str(n)+"-"+str(instr)+"-"+str(idn))
             except visa.VisaIOError as e:
                 print(n, ":", instr, ":", "Visa IO Error: check connections")
                 print(e)
-
 
         rm.close()
         #Resize width and height
@@ -38,15 +37,18 @@ class InstrumentList(QListWidget):
 
     def Clicked(self,item):
         #pick instrument here!
-        #split item.text() string into n : instr : idn
-        #emit adress (instr)???
-        QMessageBox.information(self, "Instrument Selection", "You clicked: "+item.text())
+        #split item.text() string into n,instr,idn again
+        itemtext = item.text()
+        n, instr, idn = itemtext.split('-')
+        QMessageBox.information(self, "Instrument Selection", "You clicked: \nitem\t\t"+n+"\nadress:\t\t"+instr+"\nidn:\t\t"+idn)
+
+
 
 
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    ListOfInstruments = InstrumentList()
-    ListOfInstruments.show()
+    Picker = InstrumentPicker()
+    Picker.show()
     sys.exit(app.exec_())

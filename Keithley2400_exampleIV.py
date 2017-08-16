@@ -103,19 +103,20 @@ class MainWindow(ManagedWindow):
     #override queue fuction of managed window that gets executed upon clicking on 'Queue'
     def queue(self):
         #make a temporary file
-        filename = tempfile.mktemp()
+        filename = tempfile.NamedTemporaryFile(delete=False)
         #call make_procedure from ManagedWindow to construct a new instance of procedure_class
         procedure = self.make_procedure()
 
         #calculate number of datapoints
         procedure.data_points = np.ceil((procedure.max_voltage - procedure.min_voltage) / procedure.voltage_step)
 
+        #set instrument adress
         procedure.instrument_adress = "GPIB::1"
 
 
         #construct a new instance of Results
         results = Results(procedure, filename)
-        #call new_experiment to construct a new Experiment (=convinient container for reult + procedure)
+        #call new_experiment to construct a new Experiment (=convinient container for results + procedure)
         experiment = self.new_experiment(results)
         #if its the first experiment don't start it right away
         if not self.manager.experiments.queue:
