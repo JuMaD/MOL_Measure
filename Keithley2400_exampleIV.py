@@ -15,6 +15,10 @@ from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import Procedure, Results
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 
+from PyQt5.QtWidgets import *
+import visa
+import sys
+
 
 
 import multiprocessing
@@ -24,7 +28,6 @@ import multiprocessing
 
 class IVCycles(Procedure):
     instrument_adress = "GPIB::4"
-
     averages = IntegerParameter('Averages', default=50)
     max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
     min_voltage = FloatParameter('Minimum Voltage', units='V', default=-1)
@@ -42,6 +45,7 @@ class IVCycles(Procedure):
 
     def startup(self):
         log.info("Connecting and configuring the instrument")
+        log.info("Instrument Adress" + self.instrument_adress)
         self.sourcemeter = Keithley2400(self.instrument_adress)
         self.sourcemeter.reset()
         #setting source mode to voltage, defining range and compliance
@@ -63,13 +67,13 @@ class IVCycles(Procedure):
             # Loop through each voltage point, measure and record the current
             for voltage in voltages:
                 log.info("Setting the voltage to %g V" % voltage)
-                self.sourcemeter.source_voltage = voltage
+                sourcemeter.source_voltage = voltage
 
-                self.sourcemeter.reset_buffer()
+                sourcemeter.reset_buffer()
                 sleep(0.1)
-                self.sourcemeter.start_buffer()
+                sourcemeter.start_buffer()
                 log.info("Waiting for the buffer to fill with measurements")
-                self.sourcemeter.wait_for_buffer()
+                sourcemeter.wait_for_buffer()
                 self.emit('results', {
                     'Current (A)': self.sourcemeter.means,
                     'Voltage (V)': voltage,
@@ -106,6 +110,8 @@ class MainWindow(ManagedWindow):
         #calculate number of datapoints
         procedure.data_points = np.ceil((procedure.max_voltage - procedure.min_voltage) / procedure.voltage_step)
 
+        procedure.instrument_adress = "GPIB::1"
+
 
         #construct a new instance of Results
         results = Results(procedure, filename)
@@ -130,42 +136,56 @@ class MainWindow(ManagedWindow):
             self.manager.queue(experiment)
 
 
-def pick_resources():
-    #Print available resources and return them
-    #TO_DO: Make a GUI that lists all resources and makes them selectable
-    rm = visa.ResourceManager()
-    instrs = rm.list_resources()
-    for n, instr in enumerate(instrs):
-        # trying to catch errors in comunication
-        try:
-            res = rm.open_resource(instr)
-            # try to avoid errors from *idn?
+class InstrumentPicker(QListWidget):
+    #initialize List and populate with visa instruments
+
+    def __init__(self):
+        super().__init__()
+        #bring window to front
+        self.raise_()
+
+        rm = visa.ResourceManager()
+        instrs = rm.list_resources()
+        for n, instr in enumerate(instrs):
+           # trying to catch errors in comunication
             try:
-                # noinspection PyUnresolvedReferences
-                idn = res.ask('*idn?')[:-1]
-            except visa.Error:
-                idn = "Not known"
-            finally:
-                res.close()
-                print(n, ":", instr, ":", idn)
-        except visa.VisaIOError as e:
-            print(n, ":", instr, ":", "Visa IO Error: check connections")
-            print(e)
-    #send list to QT GUI
-    #pick from list
+                res = rm.open_resource(instr)
+                # try to avoid errors from *idn?
+                try:
+                    # noinspection PyUnresolvedReferences
+                    idn = res.ask('*idn?')[:-1]
+                except visa.Error:
+                    idn = "Not known"
+                finally:
+                    res.close()
+                    self.addItem(str(n)+"-"+str(instr)+"-"+str(idn))
+            except visa.VisaIOError as e:
+                print(n, ":", instr, ":", "Visa IO Error: check connections")
+                print(e)
 
-    rm.close()
-    return instrs
+        rm.close()
+        #Resize width and height
+        self.resize(300,120)
+        self.setWindowTitle('Select Instrument')
+        #connect click handle
+        self.itemClicked.connect(self.Clicked)
 
+
+    def Clicked(self,item):
+        #pick instrument here!
+        #split item.text() string into n,instr,idn again
+        itemtext = item.text()
+        n, instr, idn = itemtext.split('-')
+        QMessageBox.information(self, "Instrument Selection", "You clicked: \nitem\t\t"+n+"\nadress:\t\t"+instr+"\nidn:\t\t"+idn)
 
 
 
 
 if __name__ == "__main__":
-    #pick instrument adress and Type
-    resources = pick_resources()
 
     app = QtGui.QApplication(sys.argv)
     window = MainWindow()
     window.show()
+    #picker = InstrumentPicker()
+    #picker.show()
     sys.exit(app.exec_())
