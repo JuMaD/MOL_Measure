@@ -19,12 +19,7 @@ from PyQt5.QtWidgets import *
 import visa
 import sys
 
-
-
 import multiprocessing
-
-
-
 
 class IVCycles(Procedure):
     instrument_adress = "GPIB::4"
@@ -34,13 +29,12 @@ class IVCycles(Procedure):
     compliance = FloatParameter('Compliance', units='A', default=0.1)
 
     cycles = IntegerParameter('#Cycles', default=1)
-
     voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
     #Calculate the number of data points from range and step
     data_points = IntegerParameter('Data points',
                                    default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
 
-    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)']
+    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Cycle']
 
 
     def startup(self):
@@ -67,13 +61,13 @@ class IVCycles(Procedure):
             # Loop through each voltage point, measure and record the current
             for voltage in voltages:
                 log.info("Setting the voltage to %g V" % voltage)
-                sourcemeter.source_voltage = voltage
+                self.sourcemeter.source_voltage = voltage
 
-                sourcemeter.reset_buffer()
+                self.sourcemeter.reset_buffer()
                 sleep(0.1)
-                sourcemeter.start_buffer()
+                self.sourcemeter.start_buffer()
                 log.info("Waiting for the buffer to fill with measurements")
-                sourcemeter.wait_for_buffer()
+                self.sourcemeter.wait_for_buffer()
                 self.emit('results', {
                     'Current (A)': self.sourcemeter.means,
                     'Voltage (V)': voltage,
@@ -88,6 +82,87 @@ class IVCycles(Procedure):
     def shutdown(self):
         self.sourcemeter.shutdown()
         log.info("Finished measuring")
+
+#ATTENTION: TO RUN DIFFERENT PROCEDURES, DIFFERENT MAINWINDOW CLASSES HAVE TO BE DEFINED
+
+class Retention(Procedure):
+    #retention here
+    #paramet
+
+    instrument_adress = "GPIB::4"
+    averages = IntegerParameter('Averages', default=50)
+    set_voltage = FloatParameter('SET Voltage', units='V', default=1)
+    read_voltage = FloatParameter('READ Voltage', units='V', default=1)
+    set_duration = FloatParameter('Duration SET Pulse', units='ms', default=1)
+    read_duration = FloatParameter('Duration READ Pulse', units='ms', default=1)
+    read_delay = FloatParameter('WRITE-READ Delay', units='s', default = 1)
+    cycles = IntegerParameter('#Cycles', default=1)
+    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Cycle']
+
+    def execute(self):
+
+        #SET Operation - one time only
+        log.info("Setting the voltage to %g V" % set_voltage)
+        self.sourcemeter.source_voltage = voltage
+        self.sourcemeter.reset_buffer()
+        sleep(0.1)
+        starttime = time.perf_counter()
+        self.sourcemeter.start_buffer()
+        log.info("Waiting for the buffer to fill with measurements")
+        self.sourcemeter.wait_for_buffer()
+        self.emit('results', {
+            'Current (A)': self.sourcemeter.means,
+            'Voltage (V)': set_voltage,
+            'Current Std (A)': self.sourcemeter.standard_devs,
+            'Cycle': 0
+        })
+        sleep(0.01)
+        if self.should_stop():
+            log.info("User aborted the procedure")
+        endtime = time.perf_counter()
+
+         #delay first measurement until read_delay time is reached
+        while endtime-starttime < read_delay:
+            endtime = time.perf_counter()
+
+        #READ Operation in cycles
+
+        for cycle in xrange(cycles.value):
+
+
+            self.sourcemeter.reset_buffer()
+            sleep(0.1)
+            #start timer right before buffer and operations
+            starttime = time.perf_counter()
+            self.sourcemeter.start_buffer()
+            log.info("Waiting for the buffer to fill with measurements")
+            self.sourcemeter.wait_for_buffer()
+            self.emit('results', {
+                'Current (A)': self.sourcemeter.means,
+                'Voltage (V)': read_voltage,
+                'Current Std (A)': self.sourcemeter.standard_devs,
+                'Cycle': cycle
+            })
+            sleep(0.01)
+            if self.should_stop():
+                log.info("User aborted the procedure")
+                break
+            endtime = time.perf_counter()
+            #stay in this loop until read_delay is reached
+            while endtime-starttime < self.read_delay:
+                    endtime = time.perf_counter()
+
+    def shutdown(self):
+        self.sourcemeter.shutdown()
+        log.info("Finished measuring")
+
+class Endurance(Procedure):
+    print('Placeholder')
+    #define endurance measurements here
+
+class SwitchingEnergy(Procedure):
+    print('Placeholder')
+    #define switching energy measurements here
 
 class MainWindow(ManagedWindow):
 
@@ -178,8 +253,6 @@ class InstrumentPicker(QListWidget):
         itemtext = item.text()
         n, instr, idn = itemtext.split('-')
         QMessageBox.information(self, "Instrument Selection", "You clicked: \nitem\t\t"+n+"\nadress:\t\t"+instr+"\nidn:\t\t"+idn)
-
-
 
 
 if __name__ == "__main__":
