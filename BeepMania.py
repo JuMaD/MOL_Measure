@@ -1,10 +1,5 @@
-#Script to test whether the Keithley reacts to TSP commands sent over VISA
-# ... playing music on the Keithley Beeper
-
-import visa
 import time
-rm = visa.ResourceManager()
-keithley = rm.open_resource("GPIB::25")
+import winsound
 
 #time of full note in ms
 _fullnotetime = 800
@@ -37,6 +32,7 @@ EN = FN/8   #eighth note
 QN = FN/4   #quarter note
 HN = FN/2   #half note
 
+
 def play(octave, note, duration):
     """play note (C=1 to B=12), in octave (1-8), and duration (msec)"""
     if note == 0:    # a pause
@@ -48,7 +44,7 @@ def play(octave, note, duration):
     for k in range(0, note):      # compute frequency of given note
         frequency *= 1.059463094  # 1.059463094 = 12th root of 2
     time.sleep(0.0001*_fullnotetime)             # delay between keys
-    rm.write(f'beeper.beep({duration}, {frequency})')
+    winsound.Beep(int(frequency), int(duration))
 
 def bigben():
     play(4,E,HN)
@@ -59,4 +55,5 @@ def bigben():
     play(4,D,HN)
     play(4,E,HN)
     play(4,C,HN+QN)
+
 bigben()
