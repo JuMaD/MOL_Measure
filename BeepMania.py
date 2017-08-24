@@ -1,21 +1,21 @@
 import time
 import winsound
 import re
+from random import randint
 #time of full note in ms
 class Beeper(object):
     """
     Defines a class to provide a convienient way to play notes on a beeperfunction.
     Beeper gets constructed with myBeeper = Beep(tempo), where 'tempo' is an integer with the tempo in beats per minute.
-    Songs with the format song = [[(int)octave, (str)note, (str)duration], [(int)octave, (str)note, (str)duration], ...] can be played using Beeper.play_song(song)
+    Songs with the format song = [[(int)octave, (str)note, (str)duration], [(int)octave, (str)note, (str)duration], ...] or song = (str)OctaveNoteDurationOctave... can be played using Beeper.play_song(song)
     Comes with 3 versions of tetris ('short', 'medium','long') and bigben as predefined songs.
     """
 
     def __init__(self, tempo):
-        self._fullnotetime = 60000/tempo
+        self.tempo = tempo
+        self._fullnotetime = int(60000/tempo)
         self.notes_dict = {"C":1, "CS":2, "DF":2, "D":3, "DS":4, "EF":4, "E":5, "FF":5, "F":6, "FS":7, "GF":7, "G":8, "GS":9, "AF":9, "A":10, "AS":11, "BF":11, "B":12,"BS":1, "CF":12, "P":0}
         self.durations_dict = {"F":self._fullnotetime, "H":self._fullnotetime/2, "Q":self._fullnotetime/4, "E":self._fullnotetime/8, "S":self._fullnotetime/16}
-
-
 
     def beepfcn(self, frequency, duration):
         """
@@ -24,12 +24,20 @@ class Beeper(object):
         :param duration: Defines the Beep Duration
         """
         winsound.Beep(frequency, duration)
+
+    def set_tempo(self, tempo):
+        self.__init__(tempo)
+
+    def change_tempo(self, change):
+        new_tempo = self.tempo + int(change)
+        self.set_tempo(new_tempo)
+
     def play(self, octave, note, duration):
         """
         Play a note with calculated frequency for a certain duration using the defined beepfcn.
         :param octave: The octave of the note. (Int) value is directly used.
         :param note: The name of the note. (str) value is used as key to look up the associated (int)
-        :param duration: The duration of the note. (str) value used to determine the duration of the note, taking into account _fullnotetime
+        :param duration: The duration of the note. (str) value used to determine the duration of the note, taking into account self._fullnotetime
         """
         if self.notes_dict[note] == 0:    # a pause
             time.sleep(self.get_duration(duration)/1000)
@@ -41,6 +49,7 @@ class Beeper(object):
             frequency *= 1.059463094  # 1.059463094 = 12th root of 2
         time.sleep(0.0001*self._fullnotetime)             # delay between keys
         self.beepfcn(int(frequency), int(self.get_duration(duration)))
+
     def play_song(self, song):
         """
         Takes a nested list of triples (octave, note, duration) as input and plays the defined song.
@@ -54,6 +63,7 @@ class Beeper(object):
 
         for i in range(0, len(octaves)):
             self.play(octaves[i], notes[i], durations[i])
+
     def get_duration(self, duration):
             value = 0
             if duration in self.durations_dict:
@@ -66,6 +76,7 @@ class Beeper(object):
                         value += self.durations_dict[character]
                 self.durations_dict[duration] = value
             return value
+
     def make_song(self, song_str):
         """
         Makes a valid 'song' nested list out of a simple string in the format "(octave)(note)(duration)(octave)..."
@@ -87,10 +98,43 @@ class Beeper(object):
 
         return zip(octave_list, note_list, duration_list)
 
+    def transpose_octave(self, song, change):
+        if type(song) is str:
+            song = self.make_song(song)
+        octave_list, note_list, duration_list = zip(*song)
+        octave_list = list(octave_list)
+        for i, octave in enumerate(octave_list):
+            octave_list[i] = octave + change
+        return zip(octave_list, note_list, duration_list)
+
+    def transpose_halftones(self, song, change):
+        change = int(change)
+
+        if type(song) is str:
+            song = self.make_song(song)
+        octave_list, note_list, duration_list = zip(*song)
+        note_list = list(note_list)
+        octave_list = list(octave_list)
+
+        for i, note in enumerate(note_list):
+            if note is not "P":
+                current_note = self.notes_dict[note]
+                new_note = current_note+change
+                while new_note>12:
+                        new_note = new_note-12
+                        octave_list[i] = octave_list[i]+1
+                while new_note <1:
+                        new_note = new_note+12
+                        octave_list[i] = octave_list[i]-1
+                note_dict_key = next(note_dict_key for note_dict_key, value in self.notes_dict.items() if value == new_note)
+                note_list[i] = note_dict_key
+
+        return zip(octave_list, note_list, duration_list)
 
     ####################
     # predefined songs #
     ####################
+
     def play_tetris(self, length):
         self.play(3,"E","Q")
         self.play(2, "B", "E")
@@ -196,15 +240,63 @@ class Beeper(object):
                 self.play(3, "C", "Q")
                 self.play(2, "A", "Q")
                 self.play(2, "A", "F")
+
     def play_bigben(self):
         song = "4EH4CH4DH3GHQ3PQ3GH4DH4EH4CHQ4PF"
         self.play_song(song)
 
+    def compose_random(self, length, quarters=True, pauses=False, rand_note=[], octave_start=2, octave_end=5):
+        octaves =[]
+        notes = []
+        durations = []
+        rand_note_dict = {}
+        if len(rand_note) == 0:
+            rand_note_dict = self.notes_dict
+        # build rand note dictionnary
+        else:
+            for note_dict_key in rand_note:
+                rand_note_dict[note_dict_key] = self.notes_dict[note_dict_key]
+
+        for i in range(0,length):
+            octave = randint(octave_start, octave_end)
+            octaves.append(octave)
 
 
-myBeep = Beeper(60)
+            note = randint(1, len(rand_note_dict))
+
+            note_dict_key = next(note_dict_key for note_dict_key, value in self.notes_dict.items() if value == note)
+            notes.append(note_dict_key)
+            if quarters:
+                durations.append("Q")
+            else:
+                duration = randint(1, 5)
+                if duration == 1:
+                    durations.append("F")
+                elif duration == 2:
+                    durations.append("H")
+                elif duration == 3:
+                    durations.append("Q")
+                elif duration == 4:
+                    durations.append("E")
+                elif duration == 5:
+                    durations.append("S")
+        print(octaves)
+        print(notes)
+        print(durations)
+
+        return(zip(octaves, notes, durations))
+
+
+
+
+myBeep = Beeper(80)
+
 #myBeep.play_bigben(1)
-song = [(4, 'E', 'H'), (4, 'E', 'H'), (4, 'E', 'H')]
-song2 = "4EH4EH4EH4EH4EH"
-notes = "1PQ2EQ1PQ1BE1PE2CE1PE2DQ"
-myBeep.play_song(song2)
+song = "1PQ2EQ1PQ1BE1PE2CE1PE2DQ"
+song2 = "4EH4CH4DH3GHQ3PQ3GH4DH4EH4CHQ4PF"
+randomsong = myBeep.compose_random(200, False, False, ["C","E"])
+myBeep.play_song(randomsong)
+#for i in range(0,10):
+ #   myBeep.change_tempo(20)
+  #  song_transposed = myBeep.transpose_halftones(song2,-2*i)
+   # myBeep.play_song(song_transposed)
