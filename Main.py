@@ -6,6 +6,8 @@ from time import sleep
 import sys
 import tempfile
 import numpy as np
+import uuid
+import re
 
 import visa
 
@@ -37,6 +39,7 @@ class IVCycles(Procedure):
     DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Cycle']
 
 
+
     def startup(self):
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress" + self.instrument_adress)
@@ -48,6 +51,11 @@ class IVCycles(Procedure):
         self.sourcemeter.measure_current()
         sleep(0.1) # wait here to give the instrument time to react
         self.sourcemeter.buffer_points = averages
+
+        #instruments = {}
+        #instruments[instrument_adress] =self.sourcemeter
+        print(instruments)
+
 
     def execute(self):
 
@@ -175,18 +183,26 @@ class MainWindow(ManagedWindow):
             y_axis='Current (A)'
         )
         self.setWindowTitle('Mol_measure 0.0.1')
+
     #override queue fuction of managed window that gets executed upon clicking on 'Queue'
     def queue(self):
-        #make a temporary file
-        filename = tempfile.NamedTemporaryFile(delete=False)
+        #create filename based on procedure name, position in queue and a unique identifier
+
+        procedure_string = re.search("'(?P<name>[^']+)'",
+                                     repr(self.procedure_class)).group("name")
+        main_str, basename = procedure_string.split('.')
+        queue_position = len(self.manager.experiments.queue)+1
+        uidn = uuid.uuid4().clock_seq_hi_variant
+        filename = f'{basename}-{queue_position}_{uidn}.csv'
+
+
         #call make_procedure from ManagedWindow to construct a new instance of procedure_class
         procedure = self.make_procedure()
 
         #calculate number of datapoints
         procedure.data_points = np.ceil((procedure.max_voltage - procedure.min_voltage) / procedure.voltage_step)
 
-        #set instrument adress
-        procedure.instrument_adress = "GPIB::1"
+
 
 
         #construct a new instance of Results

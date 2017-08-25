@@ -2,6 +2,10 @@ import time
 import winsound
 import re
 from random import randint
+#keithley beep:
+#self.write(f'beeper.beep({duration}, {frequency})')
+
+
 #time of full note in ms
 class Beeper(object):
     """
@@ -24,7 +28,6 @@ class Beeper(object):
         :param duration: Defines the Beep Duration
         """
         winsound.Beep(frequency, duration)
-
     def set_tempo(self, tempo):
         self.__init__(tempo)
 
@@ -287,16 +290,14 @@ class Beeper(object):
         return(zip(octaves, notes, durations))
 
 
+if __name__ = "__main__":
+
+    myBeep = Beeper(60)
+
+    myBeep.play_tetris("long")
+    #for i in range(0,10):
+     #   myBeep.change_tempo(20)
+      #  song_transposed = myBeep.transpose_halftones(song2,-2*i)
+       # myBeep.play_song(song_transposed)
 
 
-myBeep = Beeper(80)
-
-#myBeep.play_bigben(1)
-song = "1PQ2EQ1PQ1BE1PE2CE1PE2DQ"
-song2 = "4EH4CH4DH3GHQ3PQ3GH4DH4EH4CHQ4PF"
-randomsong = myBeep.compose_random(200, False, False, ["C","E"])
-myBeep.play_song(randomsong)
-#for i in range(0,10):
- #   myBeep.change_tempo(20)
-  #  song_transposed = myBeep.transpose_halftones(song2,-2*i)
-   # myBeep.play_song(song_transposed)
