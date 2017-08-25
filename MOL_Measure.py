@@ -326,7 +326,7 @@ class InstrumentPicker(QListWidget):
 if __name__ == "__main__":
 
     app = QtGui.QApplication(sys.argv)
-    window = MainWindowRandom()
+    window = MainWindow()
     window.show()
     # picker = InstrumentPicker()
     # picker.show()
