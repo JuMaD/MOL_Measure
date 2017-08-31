@@ -2,7 +2,9 @@ import time
 import winsound
 import re
 from random import randint
+import visa
 #keithley beep:
+
 #self.write(f'beeper.beep({duration}, {frequency})')
 
 
@@ -27,7 +29,15 @@ class Beeper(object):
         :param frequency: Defines the Beep Frequency
         :param duration: Defines the Beep Duration
         """
-        winsound.Beep(frequency, duration)
+        #winsound.Beep(frequency, duration)
+        duration_sec = duration / 1000
+        rm = visa.ResourceManager()
+        smu = rm.open_resource('GPIB0::25::INSTR')
+        print(smu.query("*IDN?"))
+        print(duration)
+        print(frequency)
+        smu.write('errorqueue.clear()')
+        smu.write(f'beeper.beep({duration_sec}, {frequency})')
     def set_tempo(self, tempo):
         self.__init__(tempo)
 
@@ -139,24 +149,9 @@ class Beeper(object):
     ####################
 
     def play_tetris(self, length):
-        self.play(3,"E","Q")
-        self.play(2, "B", "E")
-        self.play(3, "C", "E")
-        self.play(3, "D", "Q")
-        self.play(3, "C", "E")
-        self.play(2, "B", "E")
-        self.play(2, "A", "Q")
-        self.play(2, "A", "E")
-        self.play(3, "C", "E")
-        self.play(3, "E", "Q")
-        self.play(3, "D", "E")
-        self.play(3, "C", "E")
-        self.play(2, "B", "Q"+"E")
-        self.play(3, "C", "E")
-        self.play(3, "D", "Q")
-        self.play(3, "E", "Q")
-        self.play(3, "C", "Q")
-        self.play(2, "A", "Q")
+
+        song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ"
+        self.play_song(song)
         if length == "short":
             self.play(2, "A", "F")
         else:
@@ -290,11 +285,14 @@ class Beeper(object):
         return(zip(octaves, notes, durations))
 
 
-if __name__ = "__main__":
+if __name__ == "__main__":
 
-    myBeep = Beeper(60)
+    myBeep = Beeper(40)
 
-    myBeep.play_tetris("long")
+    #myBeep.play_tetris("long")
+    song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ2AQ"
+    myBeep.play_song(myBeep.transpose_octave(song,1))
+    #myBeep.play_bigben()
     #for i in range(0,10):
      #   myBeep.change_tempo(20)
       #  song_transposed = myBeep.transpose_halftones(song2,-2*i)
