@@ -13,7 +13,7 @@ from pymeasure.display.Qt import QtGui
 from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
 from pymeasure.experiment import Procedure, Results
-from pymeasure.instruments.keithley import Keithley2400
+from pymeasure.instruments.keithley import Keithley2600AB
 
 
 # TODO: make a dictionnary that stores instrument_adress:instrument_class pairs as attribute of Procedure and define __init__(instruments={}).
@@ -24,15 +24,21 @@ from pymeasure.instruments.keithley import Keithley2400
 # Measurement Procedures #
 ##########################
 class IVCycles(Procedure):
-    instrument_adress = "GPIB::4"
+    instrument_adress = "GPIB::25"
 
-    # define paramters here
+    # define measurement paramters here
     averages = IntegerParameter('Averages', default=50)
+    measurement_delay = FloatParameter('Measurement Delay', default = 0.5)
     max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
     min_voltage = FloatParameter('Minimum Voltage', units='V', default=-1)
     compliance = FloatParameter('Compliance', units='A', default=0.1)
-    cycles = IntegerParameter('# Cycles', default=1)
+    cycles = IntegerParameter('No. of Cycles', default=1)
     voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+
+    #Add Comments as parameters to show up in measurement file
+    operator = Parameter('Operator', default='JD')
+    location = Parameter('Location', default='Mun')
+    setup = Parameter('Setup',default='Probe Station')
     # Calculate the number of data points from range and step
     data_points = IntegerParameter('Data points',
                                    default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
@@ -43,22 +49,44 @@ class IVCycles(Procedure):
 
 
     def startup(self):
+        #todo: Adjust this segment to Keithlex 2635B
+
+
+        #Keithley 2600 version
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress" + self.instrument_adress)
-        self.sourcemeter = Keithley2400(self.instrument_adress)
-        self.sourcemeter.reset()
-        # setting source mode to voltage, defining range and compliance
-        self.sourcemeter.apply_voltage([-20,20],self.compliance)
-        self.sourcemeter.use_front_terminals()
-        self.sourcemeter.measure_current()
-        sleep(0.1)  # wait here to give the instrument time to react
-        self.sourcemeter.buffer_points = averages
 
-        # instruments = {}
-        # instruments[instrument_adress] =self.sourcemeter
-        # print(instruments)
+        self.sourcemeter = Keithley2600AB(self.instrument_adress)
+
+
+
 
     def execute(self):
+        # reset instrument and its dedicated buffer
+        self.sourcemeter.reset()
+        self.sourcemeter.clear_buffer()
+
+        # set to source V via smua and set buffer precision to 6
+        self.sourcemeter.set_output_fcn('suma', 'V')
+        self.sourcemeter.set_buffer_ascii(6)
+
+        # execute TSP script with "setup" functions and enable direct execution for cycles
+        self.sourcemeter.execute_script()
+        self.sourcemeter.start_on_call = True
+        # todo: make cycles from sweeps and use input parameters
+        for i=1 to cycles:
+            self.sourcemeter.sweep(start=0, stop=max_voltage, stime=measurement_delay, points=np.ceil(data_points/2), source='V')
+            #wait for buffer?!?!?!
+            self.sourcemeter.sweep(start=max_voltage, stop=min_voltage, stime=measurement_delay, points=data_points,
+                                   source='V')
+            # wait for buffer?!?!?!
+            self.sourcemeter.sweep(start=min_voltage, stop=max_voltage, stime=measurement_delay, points=data_points,
+                                   source='V')
+            #wait for buffer?!
+            results = self.sourcemeter.read_buffer()
+
+             # emit results after each full cycle:loop through voltages and use self.emit together with self.sourcemeter.means *.standard_devs and cycle number
+
 
         voltages = np.linspace(
             self.min_voltage.value,
@@ -108,57 +136,6 @@ class Retention(Procedure):
 
     def execute(self):
 
-        # SET Operation - one time only
-        log.info("Setting the voltage to %g V" % set_voltage)
-        self.sourcemeter.source_voltage = voltage
-        self.sourcemeter.reset_buffer()
-        sleep(0.1)
-        starttime = time.perf_counter()
-        self.sourcemeter.start_buffer()
-        log.info("Waiting for the buffer to fill with measurements")
-        self.sourcemeter.wait_for_buffer()
-        self.emit('results', {
-            'Current (A)': self.sourcemeter.means,
-            'Voltage (V)': set_voltage,
-            'Current Std (A)': self.sourcemeter.standard_devs,
-            'Cycle': 0
-        })
-        sleep(0.01)
-        if self.should_stop():
-            log.info("User aborted the procedure")
-        endtime = time.perf_counter()
-
-        # delay first measurement until read_delay time is reached
-        while endtime-starttime < read_delay:
-            endtime = time.perf_counter()
-
-        # READ Operation in cycles
-
-        for cycle in xrange(cycles.value):
-
-
-            self.sourcemeter.reset_buffer()
-            sleep(0.1)
-            # start timer right before buffer and operations
-            starttime = time.perf_counter()
-            self.sourcemeter.start_buffer()
-            log.info("Waiting for the buffer to fill with measurements")
-            self.sourcemeter.wait_for_buffer()
-            self.emit('results', {
-                'Current (A)': self.sourcemeter.means,
-                'Voltage (V)': read_voltage,
-                'Current Std (A)': self.sourcemeter.standard_devs,
-                'Cycle': cycle
-            })
-            sleep(0.01)
-            if self.should_stop():
-                log.info("User aborted the procedure")
-                break
-            endtime = time.perf_counter()
-            # stay in this loop until read_delay is reached
-            while endtime-starttime < self.read_delay:
-                    endtime = time.perf_counter()
-
     def shutdown(self):
         self.sourcemeter.shutdown()
         log.info("Finished measuring")
@@ -204,12 +181,12 @@ class RandomProcedure(Procedure):
 ############################
 
 class MainWindow(ManagedWindow):
-    # TODO: Change constructor to be able to call MainWindow(Procedure, inputs, displays, x_axis, y_axis)
+    # TODO: Change constructor to be able to call MainWindow(Procedure, inputs, displays, x_axis, y_axis), i.e. select the procedure on starup
     def __init__(self):
         super(MainWindow, self).__init__(
             procedure_class=IVCycles,
-            inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'compliance', 'cycles'],
-            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'data_points', 'compliance'],
+            inputs=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'compliance', 'cycles', 'operator', 'location', 'setup'],
+            displays=['averages', 'max_voltage', 'min_voltage', 'voltage_step', 'data_points', 'compliance','operator','location', 'setup'],
             x_axis='Voltage (V)',
             y_axis='Current (A)'
         )

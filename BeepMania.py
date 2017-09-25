@@ -290,7 +290,7 @@ if __name__ == "__main__":
     myBeep = Beeper(40)
 
     myBeep.play_tetris("long")
-    song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ2AQ"
+    #song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ2AQ"
     #myBeep.play_song(myBeep.transpose_octave(song,1))
     #myBeep.play_bigben()
     #for i in range(0,10):
