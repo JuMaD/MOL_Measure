@@ -72,7 +72,7 @@ class IVCycles(Procedure):
 
         # execute TSP script with "setup" functions and enable direct execution for cycles
         self.sourcemeter.execute_script()
-        self.sourcemeter.start_on_call = True
+        self.sourcemeter.start_on_call(True)
         # todo: make cycles from sweeps and use input parameters
         for i=1 to cycles:
             self.sourcemeter.sweep(start=0, stop=max_voltage, stime=measurement_delay, points=np.ceil(data_points/2), source='V')
