@@ -32,12 +32,10 @@ class Beeper(object):
         #winsound.Beep(frequency, duration)
         duration_sec = duration / 1000
         rm = visa.ResourceManager()
-        smu = rm.open_resource('GPIB0::25::INSTR')
-        print(smu.query("*IDN?"))
-        print(duration)
-        print(frequency)
+        smu = rm.open_resource('GPIB0::25::INSTR')  # todo: Change hardcoded instrument adress into parameter
         smu.write('errorqueue.clear()')
         smu.write(f'beeper.beep({duration_sec}, {frequency})')
+
     def set_tempo(self, tempo):
         self.__init__(tempo)
 

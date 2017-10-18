@@ -74,7 +74,7 @@ class IVCycles(Procedure):
         self.sourcemeter.execute_script()
         self.sourcemeter.start_on_call(True)
         # todo: make cycles from sweeps and use input parameters
-        for i=1 to cycles:
+        for i in range(1, cycles):
             self.sourcemeter.sweep(start=0, stop=max_voltage, stime=measurement_delay, points=np.ceil(data_points/2), source='V')
             #wait for buffer?!?!?!
             self.sourcemeter.sweep(start=max_voltage, stop=min_voltage, stime=measurement_delay, points=data_points,
@@ -135,18 +135,18 @@ class Retention(Procedure):
     DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Cycle']
 
     def execute(self):
-
+        log.info("Retention Procedure Running")
     def shutdown(self):
         self.sourcemeter.shutdown()
         log.info("Finished measuring")
 
 class Endurance(Procedure):
-    print('Placeholder')
+    print('Endurance Placeholder')
     # define endurance measurements here
 
 
 class SwitchingEnergy(Procedure):
-    print('Placeholder')
+    print('Switching Energy Placeholder')
     # define switching energy measurements here
 
 
@@ -301,8 +301,10 @@ class InstrumentPicker(QListWidget):
 
 
 if __name__ == "__main__":
+    print("Inside main")
 
     app = QtGui.QApplication(sys.argv)
+    # window = MainWindow()
     window = MainWindow()
     window.show()
     # picker = InstrumentPicker()
