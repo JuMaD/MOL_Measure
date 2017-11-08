@@ -1,76 +1,50 @@
 import sys
-from PyQt5.QtGui import *
-from PyQt5.QtCore import *
-from PyQt5.QtWidgets import *
+from PyQt5 import QtCore, QtGui, QtWidgets
+from setup import Ui_SetupDialog
+import visa
+from pymeasure import *
+from MOL_Measure import *
+
+from measurement_procedures import *
 
 
-class SetupDialog(QDialog):
-    """Prompts procedure (from dropdownlist) and instruments (from connected instruments) from the user before showing MainWindow"""
+class SelectionWindow(Ui_SetupDialog):
+    """Provides a class to select one of the Procedure classes stored in measurement_procedures.py"""
 
-    def __init__(self, procedures=[]):
-        super().__init__(parent=None)
+    def __init__(self, dialog, procedures, window_class=MainWindow):
         self.procedures = procedures
-        self.picked_procedure = None
+        self.procedures_dict = {}
+        self.make_procedures_dict()
+        self.selected_procedure = None
+        self.window_class = window_class
 
-        self._setup_ui()
-        self._layout()
+        Ui_SetupDialog.__init__(self)
+        self.setupUi(dialog)
 
-    # Set Up Gui
-    def _setup_ui(self):
-        # instrument picker
-        self.list_widget = QListWidget()
-        self.list_widget.itemClicked.connect(self.instrument_clicked)
-        self.refresh_button = QtGui.QPushButton('Refresh', self)
-        self.refresh_button.setEnabled(True)
-        self.refresh_button.clicked.connect(self.refresh_instruments)
+        # Connect Signals
+        self.pushButton.clicked.connect(self.refresh_instruments)
 
-        self.start_button = QtGui.QPushButton('Start', self)
-        self.start_button.setEnabled(True)
-        self.start_button.clicked.connect(self.start_mainWindow)
+        self.pushButton_2.clicked.connect(self.start_MainWindow)
+
+        self.label_5.setWordWrap(True)
+        self.label_7.setWordWrap(True)
+        self.label_2.setText("Connected Instruments")
+
+        self.listWidget.itemClicked.connect(self.instrument_selected)
+
+        self.ProcedureSelection.addItems(self.procedures_dict.keys())
+        self.selected_procedure = self.procedures_dict[self.ProcedureSelection.currentText()]
+        print(self.selected_procedure)
+        self.ProcedureSelection.currentTextChanged.connect(self.procedure_selected)
+
 
         self.refresh_instruments()
 
-    def _layout(self):
-        # ToDo: ReWrite this / use QtManager to get a nice gui
-        grid = QGridLayout()
-
-        grid.addWidget(QLabel('Measurement Procedure'), 1, 1)
-        grid.addWidget(QLabel('Inputs'), 2, 1)
-        grid.addWidget(QLabel('Data'), 3, 1)
-        grid.addWidget(QLabel('Instrument(s)'), 4, 1)
-        grid.addWidget(refresh_button, 4, 2)
-
-        grid.addWidget(list_widget, 5, 2)
-        grid.addWidget(start_button, 6, 2)
-
-        # Instrument Picker
-        inputs_vbox.addWidget(self.inputs)
-        inputs_vbox.addLayout(hbox)
-        inputs_vbox.addWidget(self.list_widget)
-        inputs_vbox.addWidget(self.refresh_button)
-        inputs_vbox.addStretch()
-        inputs_dock.setLayout(inputs_vbox)
-
-    def show_dialog(self):
-        app = QApplication(sys.argv)
-        win = QWidget()
-        win.setLayout(grid)
-        win.setGeometry(100, 100, 200, 100)
-        win.setWindowTitle("Setup Experiment")
-        win.show()
-        sys.exit(app.exec_())
-
-    def start_MainWindow(self):
-        window = MainWindow(procedure_class=self.picked_procedure)
-        window.show()
-
-    # Instrument Picker
-
     def refresh_instruments(self):
-        if self.list_widget.count() == 0:
+        if self.listWidget.count() == 0:
             startup = True
         else:
-            self.list_widget.clear()
+            self.listWidget.clear()
             startup = False
         rm = visa.ResourceManager()
         instrs = rm.list_resources()
@@ -86,49 +60,73 @@ class SetupDialog(QDialog):
                     idn = "Not known"
                 finally:
                     res.close()
-                    self.list_widget.addItem(str(n) + "-" + str(instr) + "-" + str(idn))
+                    self.listWidget.addItem(str(n) + "-" + str(instr) + "-" + str(idn))
             except visa.VisaIOError as e:
                 print(n, ":", instr, ":", "Visa IO Error: check connections")
                 print(e)
         rm.close()
         if not startup:
             QMessageBox.information(self, "Refresh", "Instruments refreshed")
-        log.info('Connected instruments refreshed.')
+            # log.info('Connected instruments refreshed.')
 
-    def instrument_clicked(self, item):
+    def instrument_selected(self, item):
+        print('Selected Instrument')
         itemtext = item.text()
+        print(itemtext)
         n, instr, idn = itemtext.split('-')
-        QMessageBox.information(self, "Instrument Selection",
+        ###############
+        # PLACEHOLDER #
+        ###############
+        # todo: Implement function that overloads adresses to start_MainWindow
+        message = QWidget()
+        QMessageBox.information(message, "Instrument Selection",
                                 "You clicked: \nitem\t\t" + n + "\nadress:\t\t" + instr + "\nidn:\t\t" + idn)  # TODO: Replace this with a function that adds the selected instrument(-adress) to the current procedure
-        return idn
 
-    # Procedure Picker
-    def PickProcedures(self):
-        # todo: list of procedures --> dropdown
-        return procedures
+    def procedure_selected(self):
+        """Sets the selected procedure"""
+
+        self.selected_procedure = self.procedures_dict[self.ProcedureSelection.currentText()]
+
+        procedure = self.selected_procedure()
+        dict = procedure.parameter_objects()
+        print(dict)
+
+        label_text = ""
+        parameters = procedure.parameter_objects()
+        for name in dict.keys():
+            label_text += parameters[name].name + ", "
+        print(label_text)
+
+        self.label_5.setText(label_text)
+
+        label_text = ""
+        for label in procedure.DATA_COLUMNS:
+            label_text += label + ", "
+        self.label_7.setText(label_text)
+
+        print(self.selected_procedure)
+
+    def make_procedures_dict(self):
+        self.procedures_dict.clear()
+        self.procedures_dict[''] = None
+        for procedure in self.procedures:
+            self.procedures_dict[procedure.__name__] = procedure
+
+    def start_MainWindow(self):
+        # Todo:Overload Instrument_Adress
+
+        self.window = self.window_class(procedure_class=self.selected_procedure)
+        self.window.show()
 
 
-def window():
-    app = QApplication(sys.argv)
-    w = QWidget()
-    b = QPushButton(w)
-    b.setText("Hello World!")
-    b.move(50, 50)
-    b.clicked.connect(showdialog)
-    w.setWindowTitle("PyQt Dialog demo")
-    w.show()
-    sys.exit(app.exec_())
 
 
-def showdialog():
-    d = QDialog()
-    b1 = QPushButton("ok", d)
-    b1.move(50, 50)
-    d.setWindowTitle("Dialog")
-    d.setWindowModality(Qt.ApplicationModal)
-    d.exec_()
 
 
 if __name__ == '__main__':
-    dialog = SetupDialog()
-    # dialog.show_dialog()
+    app = QtWidgets.QApplication(sys.argv)
+    dialog = QtWidgets.QDialog()
+    DialogWindow = SelectionWindow(dialog, [IVCycles, PulseIVCycle, Retention], MainWindow)
+    dialog.show()
+
+    sys.exit(app.exec_())
