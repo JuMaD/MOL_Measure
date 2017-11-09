@@ -1,24 +1,17 @@
 #  Import necessary packages
+# Connect to Log
+import logging
 import re
 import sys
-import tempfile
 import uuid
-import random
-from time import sleep
 
-import numpy as np
 import visa
 from PyQt5.QtWidgets import *
 
+from measurement_procedures import *
 from pymeasure.display.Qt import QtGui
 from pymeasure.display.windows import ManagedWindow
-from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
-from pymeasure.experiment import Procedure, Results
-from pymeasure.instruments.keithley import Keithley2600AB
-
-from measurement_procedures import *
-# Connect to Log
-import logging
+from pymeasure.experiment import Results
 
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
@@ -151,7 +144,7 @@ class Dummy(Procedure):
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress" + self.instrument_adress)
 
-        sourcemeter = Keithley2600AB(self.instrument_adress)
+        sourcemeter = Keithley2600(self.instrument_adress)
 
     def execute(self):
         # Execute Script here

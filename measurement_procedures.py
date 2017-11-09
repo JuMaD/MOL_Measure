@@ -1,21 +1,23 @@
 #  Import necessary packages
-import re
-import sys
-import tempfile
-import uuid
 import random
 from time import sleep
 
 import numpy as np
-import visa
-from PyQt5.QtWidgets import *
 
-from pymeasure.display.Qt import QtGui
-from pymeasure.display.windows import ManagedWindow
 from pymeasure.experiment import IntegerParameter, FloatParameter, Parameter
-from pymeasure.experiment import Procedure, Results
-from pymeasure.instruments.keithley import Keithley2600AB
+from pymeasure.experiment import Procedure
+from pymeasure.instruments.keithley import Keithley2600
 
+
+##########################
+# Pre-Defined Procedures #
+##########################
+
+# todo: Define Standard Procedures
+
+###########################
+# User-Defined Procedures #
+###########################
 
 class PulseIVCycle(Procedure):
     """
@@ -45,7 +47,7 @@ class PulseIVCycle(Procedure):
         # System startup: Build instances of all necessary device objects here
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress" + self.instrument_adress)
-        self.sourcemeter = Keithley2600AB(self.instrument_adress)
+        self.sourcemeter = Keithley2600(self.instrument_adress)
         self.sourcemeter.reset()
         self.sourcemeter.clear_buffer()
         self.sourcemeter.triad()
@@ -120,7 +122,7 @@ class IVCycles(Procedure):
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress" + self.instrument_adress)
 
-        sourcemeter = Keithley2600AB(self.instrument_adress)
+        sourcemeter = Keithley2600(self.instrument_adress)
 
     def execute(self):
         # reset instrument and its dedicated buffer
@@ -220,7 +222,7 @@ class RandomProcedure(Procedure):
     seed = Parameter('Random Seed', default='12345')
     negNumber = IntegerParameter('Number', default=-1)
 
-    DATA_COLUMNS = ['Iteration', 'Random Number', 'Negative Number']
+    DATA_COLUMNS = ['Iteration', 'Random Number']
 
     def startup(self):
         log.info("Setting the seed of the random number generator")
@@ -231,8 +233,7 @@ class RandomProcedure(Procedure):
         for i in range(self.iterations):
             data = {
                 'Iteration': i,
-                'Random Number': random.random(),
-                'Negative Number': self.negNumber
+                'Random Number': random.random()
             }
             self.emit('results', data)
             log.debug("Emitting results: %s" % data)
