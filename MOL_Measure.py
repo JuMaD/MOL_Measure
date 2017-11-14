@@ -31,6 +31,20 @@ log.addHandler(logging.NullHandler())
 ############################
 # Graphical User Interface #
 ############################
+class TestWindow(ManagedWindow):
+    def __init__(self, procedure_class=Keithley_Test,
+                 inputs=['start_tone'],
+                 displays=['start_tone'],
+                 x_axis='Voltage (V)',
+                 y_axis='Current (A)'):
+        super(TestWindow, self).__init__(
+            procedure_class=procedure_class,
+            inputs=inputs,
+            displays=displays,
+            x_axis=x_axis,
+            y_axis=y_axis
+        )
+        self.setWindowTitle('Keithley Test 0.0.1')
 
 class MainWindow(ManagedWindow):
     # overload kwargs to be able to dynamically call MainWindow(kwargs)
@@ -204,6 +218,7 @@ if __name__ == "__main__":
     app = QtGui.QApplication(sys.argv)
     # window = MainWindow()
     window = MainWindow(procedure_class=IVCycles)
+    #window = TestWindow(procedure_class=Keithley_Test)
     window.show()
     # picker = InstrumentPicker()
     # picker.show()
