@@ -17,38 +17,37 @@ class SelectionWindow(Ui_SetupDialog):
     """
 
     # todo: preselect instruments that fit to the selected_procedure
-    # todo: add window_class selector to the gui
+    # todo: add window_class selector to the gui to select a certain gui
     def __init__(self, dialog, procedures, window_class=MainWindow):
+        # setting up variables
         self.procedures = procedures
         self.procedures_dict = {}
         self.make_procedures_dict()
         self.selected_procedure = None
         self.window_class = window_class
 
+        # init the GUI defined in Ui_SetupDialog
         Ui_SetupDialog.__init__(self)
         self.setupUi(dialog)
 
         # Connect Signals
         self.pushButton.clicked.connect(self.refresh_instruments)
-
-        self.pushButton_2.clicked.connect(self.start_MainWindow)
-
+        self.pushButton_2.clicked.connect(self.start_MeasureGUI)
         self.label_5.setWordWrap(True)
         self.label_7.setWordWrap(True)
         self.label_2.setText("Connected Instruments")
 
-        # Todo: Find a solution to selecting multiple items from listed instruments
+
         self.listWidget.itemActivated.connect(self.instrument_selected)
 
         self.ProcedureSelection.addItems(self.procedures_dict.keys())
         self.selected_procedure = self.procedures_dict[self.ProcedureSelection.currentText()]
-        print(self.selected_procedure)
         self.ProcedureSelection.currentTextChanged.connect(self.procedure_selected)
 
         self.refresh_instruments()
 
     def refresh_instruments(self):
-        """Prompts the connected instruments using VISA Resource Manager and prints the result as into QListWidget"""
+        """Prompts the connected instruments using VISA Resource Manager and prints the result as selectable items into QListWidget"""
         if self.listWidget.count() == 0:
             startup = True
         else:
@@ -79,13 +78,15 @@ class SelectionWindow(Ui_SetupDialog):
             # log.info('Connected instruments refreshed.')
 
     def instrument_selected(self, item):
-        """Returns the VISA adress(es) of the instruments selected by the user from QListWidget."""
+        """Returns the name(s), VISA adress(es) and returns to SCIPI '*IDN?' of the instruments selected by the user from QListWidget.
+        :param item:    The selected item from QListWidget
+        """
         itemtext = item.text()
         n, instr, idn = itemtext.split('-')
         ###############
         # PLACEHOLDER #
         ###############
-        # todo: Implement function that overloads adresses to start_MainWindow
+        # todo: Implement function that overloads adress(es) of the selected Device(s) to start_MeasureGUI
         # todo: Make multiple Instruments selectable
 
         message = QWidget()
@@ -93,14 +94,15 @@ class SelectionWindow(Ui_SetupDialog):
                                 "You clicked: \nitem\t\t" + n + "\nadress:\t\t" + instr + "\nidn:\t\t" + idn)  # TODO: Replace this with a function that adds the selected instrument(-adress) to the current procedure
 
     def procedure_selected(self):
-        """Sets the selected procedure"""
+        """Sets the selected procedure and prints its Parameters and DATA_COLUMNS to the corresponding labels in the GUI.
+        """
 
         self.selected_procedure = self.procedures_dict[self.ProcedureSelection.currentText()]
 
         procedure = self.selected_procedure()
-        dict = procedure.parameter_objects()
-        print(dict)
 
+        # Show parameters of selected Procedure to the according qtLabel
+        dict = procedure.parameter_objects()
         label_text = ""
         parameters = procedure.parameter_objects()
         for name in dict.keys():
@@ -109,25 +111,32 @@ class SelectionWindow(Ui_SetupDialog):
 
         self.label_5.setText(label_text[:-2])
 
+        #Print DATA_COLUMNS of selected Procedure to the according qtLabel
         label_text = ""
         for label in procedure.DATA_COLUMNS:
             label_text += label + ", "
         self.label_7.setText(label_text[:-2])
 
+        #console output for debugging
         print(self.selected_procedure)
 
     def make_procedures_dict(self):
+        """Makes a dictionary NAME_OF_PROCEDURE:PROCEDURE_OBJECT from the string list procedures
+        to easily adress Procedure Objects.
+        """
+
         self.procedures_dict.clear()
         self.procedures_dict[''] = None
         for procedure in self.procedures:
             self.procedures_dict[procedure.__name__] = procedure
 
-    def start_MainWindow(self):
-        # Todo:Overload Instrument_Adress
+    def start_MeasureGUI(self):
+        """Starts the specified GUI with the user selected Procedure and Instrument(s)"""
+        # Todo:Overload Instrument(s) to the GUI?
+        # Todo: Introduce required_instruments and connected_instruments to Procedure class
 
         self.window = self.window_class(procedure_class=self.selected_procedure)
         self.window.show()
-
 
 # Example Usage
 if __name__ == '__main__':
