@@ -3,6 +3,8 @@ import winsound
 import re
 from random import randint
 import visa
+
+import pymeasure
 #keithley beep:
 
 #self.write(f'beeper.beep({duration}, {frequency})')
@@ -17,7 +19,8 @@ class Beeper(object):
     Comes with 3 versions of tetris ('short', 'medium','long') and bigben as predefined songs.
     """
 
-    def __init__(self, tempo):
+    def __init__(self, tempo, adress):
+        self.adress = 'GPIB0::25::INSTR'
         self.tempo = tempo
         self._fullnotetime = int(60000/tempo)
         self.notes_dict = {"C":1, "CS":2, "DF":2, "D":3, "DS":4, "EF":4, "E":5, "FF":5, "F":6, "FS":7, "GF":7, "G":8, "GS":9, "AF":9, "A":10, "AS":11, "BF":11, "B":12,"BS":1, "CF":12, "P":0}
@@ -32,7 +35,7 @@ class Beeper(object):
         #winsound.Beep(frequency, duration)
         duration_sec = duration / 1000
         rm = visa.ResourceManager()
-        smu = rm.open_resource('GPIB0::25::INSTR')  # todo: Change hardcoded instrument adress into parameter
+        smu = rm.open_resource(self.adress)
         smu.write('errorqueue.clear()')
         smu.write(f'beeper.beep({duration_sec}, {frequency})')
 
