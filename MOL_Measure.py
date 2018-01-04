@@ -24,27 +24,13 @@ log.addHandler(logging.NullHandler())
 # Measurement Procedures #
 ##########################
 
-
-
+"""Defined in measurement_procedures.py"""
 
 
 ############################
 # Graphical User Interface #
 ############################
-class TestWindow(ManagedWindow):
-    def __init__(self, procedure_class=Keithley_Test,
-                 inputs=['start_tone'],
-                 displays=['start_tone'],
-                 x_axis='Voltage (V)',
-                 y_axis='Current (A)'):
-        super(TestWindow, self).__init__(
-            procedure_class=procedure_class,
-            inputs=inputs,
-            displays=displays,
-            x_axis=x_axis,
-            y_axis=y_axis
-        )
-        self.setWindowTitle('Keithley Test 0.0.1')
+
 
 class MainWindow(ManagedWindow):
     # overload kwargs to be able to dynamically call MainWindow(kwargs)
@@ -64,7 +50,7 @@ class MainWindow(ManagedWindow):
             x_axis=x_axis,
             y_axis=y_axis
         )
-        self.setWindowTitle('Mol_measure 0.0.1')
+        self.setWindowTitle('Mol_measure 0.1.0')
 
     # override queue fuction of managed window that gets executed upon clicking on 'Queue'
     def queue(self):
@@ -139,30 +125,6 @@ class MainWindowRandom(ManagedWindow):
 ##############################
 
 
-class Dummy(Procedure):
-    instrument_adress = "GPIB::25"
-
-    # define measurement paramters here
-    max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
-
-    # Add Comments as parameters to show up in measurement file
-    operator = Parameter('Operator', default='JD')
-    location = Parameter('Location', default='Mun')
-    setup = Parameter('Setup', default='Probe Station')
-
-    # define DATA_COLUMNS that are written to the file
-    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)']
-
-    def startup(self):
-        # System startup: Build instances of all necessary device objects here
-        log.info("Connecting and configuring the instrument")
-        log.info("Instrument Adress" + self.instrument_adress)
-
-        sourcemeter = Keithley2600(self.instrument_adress)
-
-    def execute(self):
-        # Execute Script here
-        print("Execute")
 
 class InstrumentPicker(QListWidget):
     # initialize List and populate with visa instruments

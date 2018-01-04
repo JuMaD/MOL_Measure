@@ -12,6 +12,11 @@ from pymeasure.instruments.keithley import Keithley2600
 log = logging.getLogger(__name__)
 log.addHandler(logging.NullHandler())
 
+
+##########
+# global #
+##########
+instrument_adress = "GPIB0::26::INSTR"
 ##########################
 # Pre-Defined Procedures #
 ##########################
@@ -21,29 +26,60 @@ log.addHandler(logging.NullHandler())
 ###########################
 # User-Defined Procedures #
 ###########################
-class Keithley_Test(Procedure):
-    """This Procedure is used to test the communication with a Keithley 2635"""
 
-    start_tone = IntegerParameter('Start Tone', default=44)
-    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Start Tone']
+class IVCycles(Procedure):
+    # define measurement paramters here
+    averages = IntegerParameter('Averages', default=50)
+    measurement_delay = FloatParameter('Measurement Delay', default=0.5)
+    max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
+    min_voltage = IntegerParameter('Minimum Voltage', units='V', default=-1.0)
+    compliance = FloatParameter('Compliance', units='A', default=0.1)
+    cycles = IntegerParameter('No. of Cycles', default=1)
+    voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+
+    # Add Comments as parameters to show up in measurement file
+    operator = Parameter('Operator', default='JD')
+    location = Parameter('Location', default='Mun')
+    setup = Parameter('Setup', default='Probe Station')
+
+    # Calculate the number of data points from range and step
+    data_points = IntegerParameter('Data points',
+                                   default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
+
+    # define DATA_COLUMNS that are written to the file
+    DATA_COLUMNS = ['Voltage (V)', 'Current (A)']
 
     def startup(self):
-        # System startup: Build instances of all necessary device objects here
-        log.info("Connecting and configuring the instrument")
-        log.info("Instrument Adress" + self.instrument_adress)
         print('startup')
-        self.sourcemeter = Keithley2600(self.instrument_adress)
-        self.sourcemeter.reset()
-        self.sourcemeter.clear_buffer()
+        log.info("Connecting and configuring the instrument")
+        log.info("Instrument Adress: " + instrument_adress)
+        self.sourcemeter = Keithley2600(instrument_adress)
         self.sourcemeter.triad()
         self.sourcemeter.set_screentext('$R PulseIVCycle $N$B Ready to measure')
 
     def execute(self):
-        print('exec')
-        self.sourcemeter.triad(base_frequency=10*start_tone)
-    def shutdown(self):
-        print('shutdown')
+        print('execute')
+        # reset instrument and its dedicated buffer
+        self.sourcemeter.reset()
+        self.sourcemeter.clear_buffer()
+        self.sourcemeter.setup_buffer(precision=6)
+        log.info(f'start: {self.min_voltage}. stop {self.max_voltage}, stime {self.measurement_delay}. points = {self.data_points}')
+        self.sourcemeter.auto_sweep(start=0, stop=self.max_voltage, stime=self.measurement_delay, points=np.ceil(self.data_points / 2),
+                                   source='V')
 
+        self.sourcemeter.wait_for_srq()
+        results = self.sourcemeter.get_buffer_data()
+        for i in range(0, len(results['sourced']) - 1):
+            self.emit('results',
+                      {
+                          'Voltage (V)': results['sourced'][i],
+                          'Current (A)': results['measured'][i],
+                      })
+
+    def shutdown(self):
+        self.sourcemeter.shutdown()
+        log.info("Finished measuring")
+        print('shutdown')
 
 class PulseIVCycle(Procedure):
     """
@@ -51,7 +87,7 @@ class PulseIVCycle(Procedure):
     1. Pulse at voltage `pulse_voltage` for `pulse_duration` in ms
     2. Perform `cycles` sweeps from `min_voltage` to `max_voltage` starting with a sweep from 0 to max and ending with a sweep from max to 0
     """
-    instrument_adress = "GPIB::25"
+
     # define measurement paramters here
     max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
     min_voltage = FloatParameter('Minimum Voltage', units='V',
@@ -72,8 +108,8 @@ class PulseIVCycle(Procedure):
     def startup(self):
         # System startup: Build instances of all necessary device objects here
         log.info("Connecting and configuring the instrument")
-        log.info("Instrument Adress" + self.instrument_adress)
-        self.sourcemeter = Keithley2600(self.instrument_adress)
+        log.info("Instrument Adress" + instrument_adress)
+        self.sourcemeter = Keithley2600(instrument_adress)
         self.sourcemeter.reset()
         self.sourcemeter.clear_buffer()
         self.sourcemeter.triad()
@@ -115,106 +151,11 @@ class PulseIVCycle(Procedure):
     def shutdown(self):
         self.sourcemeter.shutdown()
 
-class IVCycles(Procedure):
-    instrument_adress = "GPIB0::25::INSTR"
-    # define measurement paramters here
-    averages = IntegerParameter('Averages', default=50)
-    measurement_delay = FloatParameter('Measurement Delay', default=0.5)
-    max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
-    min_voltage = IntegerParameter('Minimum Voltage', units='V', default=-1.0)
-    compliance = FloatParameter('Compliance', units='A', default=0.1)
-    cycles = IntegerParameter('No. of Cycles', default=1)
-    voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
-
-    # Add Comments as parameters to show up in measurement file
-    operator = Parameter('Operator', default='JD')
-    location = Parameter('Location', default='Mun')
-    setup = Parameter('Setup', default='Probe Station')
-
-    # Calculate the number of data points from range and step
-    data_points = IntegerParameter('Data points',
-                                   default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
-
-    # define DATA_COLUMNS that are written to the file
-    DATA_COLUMNS = ['Voltage (V)', 'Current (A)', 'Current Std (A)', 'Cycle']
-
-    def startup(self):
-        print('startup')
-        # todo: Adjust this segment to Keithlex 2635B
-        # Keithley 2600 version
-        log.info("Connecting and configuring the instrument")
-        log.info("Instrument Adress" + self.instrument_adress)
-        self.sourcemeter = Keithley2600(self.instrument_adress)
-        self.sourcemeter.triad()
-        self.sourcemeter.set_screentext('$R PulseIVCycle $N$B Ready to measure')
-
-    def execute(self):
-        print('execute')
-        # reset instrument and its dedicated buffer
-        self.sourcemeter.reset()
-        self.sourcemeter.clear_buffer()
-
-        # set to source V via smua and set buffer precision to 6
-        self.sourcemeter.set_output_fcn('suma', 'V')
-        self.sourcemeter.set_buffer_ascii(6)
-
-        # execute TSP script with "setup" functions and enable direct execution for cycles
-        self.sourcemeter.execute_script()
-        self.sourcemeter.start_on_call = True
-        # todo: make cycles from sweeps and use input parameters
-        for i in range(1, cycles):
-            self.sourcemeter.sweep(start=0, stop=max_voltage, stime=measurement_delay, points=np.ceil(data_points / 2),
-                                   source='V')
-            # wait for buffer?!?!?!
-            self.sourcemeter.sweep(start=max_voltage, stop=min_voltage, stime=measurement_delay, points=data_points,
-                                   source='V')
-            # wait for buffer?!?!?!
-            self.sourcemeter.sweep(start=min_voltage, stop=max_voltage, stime=measurement_delay, points=data_points,
-                                   source='V')
-            # wait for buffer?!
-            results = self.sourcemeter.read_buffer()
-
-            # emit results after each full cycle:loop through voltages and use self.emit together with self.sourcemeter.means *.standard_devs and cycle number
-
-        voltages = np.linspace(
-            self.min_voltage.value,
-            self.max_voltage.value,
-            num=self.data_points.value
-        )
-        # Loop through cycles
-        for cycle in xrange(cycles.value):
-            # Loop through each voltage point, measure and record the current
-            for voltage in voltages:
-                log.info("Setting the voltage to %g V" % voltage)
-                self.sourcemeter.source_voltage = voltage
-
-                self.sourcemeter.reset_buffer()
-                sleep(0.1)
-                self.sourcemeter.start_buffer()
-                log.info("Waiting for the buffer to fill with measurements")
-                self.sourcemeter.wait_for_srq()
-                self.emit('results', {
-                    'Current (A)': self.sourcemeter.means,
-                    'Voltage (V)': voltage,
-                    'Current Std (A)': self.sourcemeter.standard_devs,
-                    'Cycle': i
-                })
-                sleep(0.01)
-                if self.should_stop():
-                    log.info("User aborted the procedure")
-                    break
-
-    def shutdown(self):
-        #self.sourcemeter.shutdown()
-        #log.info("Finished measuring")
-        print('shutdown')
-
-
 class Retention(Procedure):
     # retention here
     # paramet
 
-    instrument_adress = "GPIB0::25"
+
     averages = IntegerParameter('Averages', default=50)
     set_voltage = FloatParameter('SET Voltage', units='V', default=1)
     read_voltage = FloatParameter('READ Voltage', units='V', default=1)
@@ -230,17 +171,6 @@ class Retention(Procedure):
     def shutdown(self):
         self.sourcemeter.shutdown()
         log.info("Finished measuring")
-
-
-class Endurance(Procedure):
-    print('Endurance Placeholder')
-    # define endurance measurements here
-
-
-class SwitchingEnergy(Procedure):
-    print('Switching Energy Placeholder')
-    # define switching energy measurements here
-
 
 class RandomProcedure(Procedure):
     iterations = IntegerParameter('Loop Iterations')
