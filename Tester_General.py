@@ -5,7 +5,7 @@ from time import sleep
 import numpy as np
 
 
-smu = Keithley2600('GPIB0::25::INSTR')
+smu = Keithley2600('GPIB0::26::INSTR')
 #smu.triad()
 #smu.set_screentext('$R PulseIVCycle $N$B Ready to measure')
 #sleep(2)
@@ -14,16 +14,12 @@ smu = Keithley2600('GPIB0::25::INSTR')
 
 
 smu.write('*CLS')
-print('STB  '+str(smu.ask('*STB?')))
-
-smu.write("*SRE 1")
-print('SRE  '+str(smu.ask('*SRE?')))
-
-smu.write('status.measurement.enable = status.measurement.BAV')
-print('SME  '+str(smu.ask('print(status.measurement.enable)')))
-
-smu.auto_sweep(start=0, stop=1, stime=0.010, points=2, keyword='lin')
-smu.wait_for_buffer()
+smu.clear_buffer()
+smu.set_buffer_ascii()
+smu.auto_sweep(start=0, stop=3, stime=0.010, points=10, keyword='lin')
+smu.wait_for_srq()
+smu.triad()
+print(smu.get_buffer_data())
 print('Done')
 #smu.adapter.wait_for_srq()
 

@@ -192,7 +192,7 @@ class IVCycles(Procedure):
                 sleep(0.1)
                 self.sourcemeter.start_buffer()
                 log.info("Waiting for the buffer to fill with measurements")
-                self.sourcemeter.wait_for_buffer()
+                self.sourcemeter.wait_for_srq()
                 self.emit('results', {
                     'Current (A)': self.sourcemeter.means,
                     'Voltage (V)': voltage,
