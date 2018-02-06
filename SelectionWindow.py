@@ -90,9 +90,10 @@ class SelectionWindow(Ui_SetupDialog):
             self.instruments_dict[instr] = idn
         try:
             self.selected_procedure.instruments_dict = self.instruments_dict
-            print(self.instruments_dict)
         except:
+            print('Passing instruments failed.')
             pass
+        print(self.instruments_dict)
 
     def procedure_selected(self):
         """Sets the selected procedure and prints its Parameters and DATA_COLUMNS to the corresponding labels in the GUI.

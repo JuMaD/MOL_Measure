@@ -39,7 +39,7 @@ class ProcedureWithInstruments(Procedure):
     user selected, connected devices (names & adresses)"""
     def __init__(self, instruments_dict={}):
         Procedure.__init__(self)
-        self.instruments_dict = instruments_dict
+        instrument_adress = ''
 
 
 
@@ -58,6 +58,7 @@ class IVCycles(ProcedureWithInstruments):
     location = Parameter('Location', default='Mun')
     setup = Parameter('Setup', default='Probe Station')
 
+
     # Calculate the number of data points from range and step
     data_points = IntegerParameter('Data points',
                                    default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
@@ -67,11 +68,14 @@ class IVCycles(ProcedureWithInstruments):
 
     def startup(self):
         print('startup')
+        for adress,name in self.instruments_dict.items():
+            if not name.find('Keithley Instruments Inc., Model 2635B'):
+                self.instrument_adress = adress
         log.info("Connecting and configuring the instrument")
-        log.info("Instrument Adress: " + instrument_adress)
+        log.info("Instrument Adress: " + self.instrument_adress)
         log.info("Instrument Dict: " + str(self.instruments_dict))
-        self.sourcemeter = Keithley2600(instrument_adress)
-        self.sourcemeter.triad()
+        self.sourcemeter = Keithley2600(self.instrument_adress)
+        #self.sourcemeter.triad()
         self.sourcemeter.set_screentext('$R PulseIVCycle $N$B Ready to measure')
 
     def execute(self):
