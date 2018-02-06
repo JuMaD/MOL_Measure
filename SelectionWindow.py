@@ -132,13 +132,24 @@ class SelectionWindow(Ui_SetupDialog):
         for procedure in self.procedures:
             self.procedures_dict[procedure.__name__] = procedure
 
+    def check_requirements(self):
+        try:
+            for instrument in self.selected_procedure.required_instruments:
+                for key, value in self.selected_procedure.instruments_dict.items():
+                    if not instrument in value:
+                        print(f'Too many or too few instruments selected (Most likely, {instrument} not selected.')
+                        return False
+            return True
+        except:
+            print('Failed checking required instruments')
+            return False
+
+
     def start_MeasureGUI(self):
         """Starts the specified GUI with the user selected Procedure and Instrument(s)"""
-        # Todo:Overload Instrument(s) to the GUI?
-        # Todo: Introduce required_instruments and connected_instruments to Procedure class
-
-        self.window = self.window_class(procedure_class=self.selected_procedure)
-        self.window.show()
+        if self.check_requirements():
+            self.window = self.window_class(procedure_class=self.selected_procedure)
+            self.window.show()
 
 # Example Usage
 if __name__ == '__main__':

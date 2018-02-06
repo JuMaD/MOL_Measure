@@ -42,8 +42,10 @@ class ProcedureWithInstruments(Procedure):
         instrument_adress = ''
 
 
-
 class IVCycles(ProcedureWithInstruments):
+
+    #define required instruments
+    required_instruments = ['Keithley Instruments Inc., Model 2635B']
     # define measurement paramters here
     averages = IntegerParameter('Averages', default=50)
     measurement_delay = FloatParameter('Measurement Delay', default=0.5)
@@ -52,6 +54,7 @@ class IVCycles(ProcedureWithInstruments):
     compliance = FloatParameter('Compliance', units='A', default=0.1)
     cycles = IntegerParameter('No. of Cycles', default=1)
     voltage_step = FloatParameter('Voltage Step', units='V', default=0.1)
+
 
     # Add Comments as parameters to show up in measurement file
     operator = Parameter('Operator', default='JD')
@@ -68,7 +71,7 @@ class IVCycles(ProcedureWithInstruments):
     def startup(self):
         print('startup')
         for adress,name in self.instruments_dict.items():
-            if not name.find('Keithley Instruments Inc., Model 2635B'):
+            if 'Keithley Instruments Inc., Model 2635B' in name:
                 self.instrument_adress = adress
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress: " + self.instrument_adress)
