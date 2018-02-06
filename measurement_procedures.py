@@ -16,7 +16,7 @@ log.addHandler(logging.NullHandler())
 ##########
 # global #
 ##########
-instrument_adress = "GPIB0::26::INSTR"
+
 
 ##########################
 # Pre-Defined Procedures #
@@ -58,7 +58,6 @@ class IVCycles(ProcedureWithInstruments):
     location = Parameter('Location', default='Mun')
     setup = Parameter('Setup', default='Probe Station')
 
-
     # Calculate the number of data points from range and step
     data_points = IntegerParameter('Data points',
                                    default=np.ceil((max_voltage.value - min_voltage.value) / voltage_step.value))
@@ -85,9 +84,10 @@ class IVCycles(ProcedureWithInstruments):
         self.sourcemeter.clear_buffer()
         self.sourcemeter.setup_buffer(precision=6)
         log.info(f'start: {self.min_voltage}. stop {self.max_voltage}, stime {self.measurement_delay}. points = {self.data_points}')
-        self.sourcemeter.auto_sweep(start=0, stop=self.max_voltage, stime=self.measurement_delay, points=np.ceil(self.data_points / 2),
-                                   source='V')
 
+        self.sourcemeter.set_output(state='ON')
+        self.sourcemeter.auto_sweep(start=0, stop=self.max_voltage, stime=self.measurement_delay, points=np.ceil(self.data_points / 2 +1),
+                                   source='V')
         self.sourcemeter.wait_for_srq()
         results = self.sourcemeter.get_buffer_data()
         for i in range(0, len(results['sourced']) - 1):
