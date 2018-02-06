@@ -16,8 +16,10 @@ class SelectionWindow(Ui_SetupDialog):
 
     """
 
+    # ToDo: change label names into comprehensive names instead of "label_n"
     # todo: preselect instruments that fit to the selected_procedure
     # todo: add window_class selector to the gui to select a certain gui
+
     def __init__(self, dialog, procedures, window_class=MainWindow):
         # setting up variables
         self.procedures = procedures
@@ -25,6 +27,8 @@ class SelectionWindow(Ui_SetupDialog):
         self.make_procedures_dict()
         self.selected_procedure = None
         self.window_class = window_class
+
+        self.instruments_dict = {}
 
         # init the GUI defined in Ui_SetupDialog
         Ui_SetupDialog.__init__(self)
@@ -38,7 +42,8 @@ class SelectionWindow(Ui_SetupDialog):
         self.label_2.setText("Connected Instruments")
 
 
-        self.listWidget.itemActivated.connect(self.instrument_selected)
+        self.listWidget.itemClicked.connect(self.update_instruments_dict)
+        self.listWidget.setSelectionMode(QtGui.QAbstractItemView.MultiSelection)
 
         self.ProcedureSelection.addItems(self.procedures_dict.keys())
         self.selected_procedure = self.procedures_dict[self.ProcedureSelection.currentText()]
@@ -77,21 +82,17 @@ class SelectionWindow(Ui_SetupDialog):
             QMessageBox.information(message, "Refresh", "Instruments refreshed")
             # log.info('Connected instruments refreshed.')
 
-    def instrument_selected(self, item):
-        """Returns the name(s), VISA adress(es) and returns to SCIPI '*IDN?' of the instruments selected by the user from QListWidget.
-        :param item:    The selected item from QListWidget
-        """
-        itemtext = item.text()
-        n, instr, idn = itemtext.split('-')
-        ###############
-        # PLACEHOLDER #
-        ###############
-        # todo: Implement function that overloads adress(es) of the selected Device(s) to start_MeasureGUI
-        # todo: Make multiple Instruments selectable
-
-        message = QWidget()
-        QMessageBox.information(message, "Instrument Selection",
-                                "You clicked: \nitem\t\t" + n + "\nadress:\t\t" + instr + "\nidn:\t\t" + idn)  # TODO: Replace this with a function that adds the selected instrument(-adress) to the current procedure
+    def update_instruments_dict(self):
+        """Updates instruments_dict to the instruments selected by the user in QListWidget and passes it to the selected ProcedureWithInstruments"""
+        self.instruments_dict.clear()
+        for item in self.listWidget.selectedItems():
+            n, instr, idn = item.text().split('-')
+            self.instruments_dict[instr] = idn
+        try:
+            self.selected_procedure.instruments_dict = self.instruments_dict
+            print(self.instruments_dict)
+        except:
+            pass
 
     def procedure_selected(self):
         """Sets the selected procedure and prints its Parameters and DATA_COLUMNS to the corresponding labels in the GUI.

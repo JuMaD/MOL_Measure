@@ -1,6 +1,6 @@
 #  Import necessary packages
-import random
 import logging
+import random
 from time import sleep
 
 import numpy as np
@@ -17,6 +17,7 @@ log.addHandler(logging.NullHandler())
 # global #
 ##########
 instrument_adress = "GPIB0::26::INSTR"
+
 ##########################
 # Pre-Defined Procedures #
 ##########################
@@ -26,8 +27,23 @@ instrument_adress = "GPIB0::26::INSTR"
 ###########################
 # User-Defined Procedures #
 ###########################
+# Todo: Write Sweep Procedure
+# Todo: Write Cycle Procedure
+# Todo: Write Pulse Procedure (Just factory script)
+# Todo: Write Pulse Procedure (write Pulse, read cycle)
+# Todo: Write Retention Procedure
+# Todo: Write Endurance Procedure
 
-class IVCycles(Procedure):
+class ProcedureWithInstruments(Procedure):
+    """Class that adds a dict of instruments to Procedure. SelectionWindow uses this dict to pass
+    user selected, connected devices (names & adresses)"""
+    def __init__(self, instruments_dict={}):
+        Procedure.__init__(self)
+        self.instruments_dict = instruments_dict
+
+
+
+class IVCycles(ProcedureWithInstruments):
     # define measurement paramters here
     averages = IntegerParameter('Averages', default=50)
     measurement_delay = FloatParameter('Measurement Delay', default=0.5)
@@ -53,6 +69,7 @@ class IVCycles(Procedure):
         print('startup')
         log.info("Connecting and configuring the instrument")
         log.info("Instrument Adress: " + instrument_adress)
+        log.info("Instrument Dict: " + str(self.instruments_dict))
         self.sourcemeter = Keithley2600(instrument_adress)
         self.sourcemeter.triad()
         self.sourcemeter.set_screentext('$R PulseIVCycle $N$B Ready to measure')
@@ -81,7 +98,7 @@ class IVCycles(Procedure):
         log.info("Finished measuring")
         print('shutdown')
 
-class PulseIVCycle(Procedure):
+class PulseIVCycle(ProcedureWithInstruments):
     """
     Uses a Keithley 26XX device to perform the following measurement:
     1. Pulse at voltage `pulse_voltage` for `pulse_duration` in ms
@@ -151,7 +168,7 @@ class PulseIVCycle(Procedure):
     def shutdown(self):
         self.sourcemeter.shutdown()
 
-class Retention(Procedure):
+class Retention(ProcedureWithInstruments):
     # retention here
     # paramet
 
@@ -172,7 +189,7 @@ class Retention(Procedure):
         self.sourcemeter.shutdown()
         log.info("Finished measuring")
 
-class RandomProcedure(Procedure):
+class RandomProcedure(ProcedureWithInstruments):
     iterations = IntegerParameter('Loop Iterations')
     delay = FloatParameter('Delay Time', units='s', default=0.2)
     seed = Parameter('Random Seed', default='12345')
@@ -182,6 +199,7 @@ class RandomProcedure(Procedure):
 
     def startup(self):
         log.info("Setting the seed of the random number generator")
+        log.info("Connected Instruments:"+str(self.instruments_dict))
         random.seed(self.seed)
 
     def execute(self):
