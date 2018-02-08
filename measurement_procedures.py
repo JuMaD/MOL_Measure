@@ -78,7 +78,7 @@ class IVCycles(ProcedureWithInstruments):
         log.info("Instrument Adress: " + self.instrument_adress)
         log.info("Instrument Dict: " + str(self.instruments_dict))
         self.sourcemeter = Keithley2600(self.instrument_adress)
-        #self.sourcemeter.triad()
+        self.sourcemeter.triad()
         self.sourcemeter.set_screentext('$R PulseIVCycle $N$B Ready to measure')
 
     def execute(self):

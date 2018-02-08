@@ -109,8 +109,6 @@ class SelectionWindow(Ui_SetupDialog):
         parameters = procedure.parameter_objects()
         for name in dict.keys():
             label_text += parameters[name].name + ", "
-        print(label_text)
-
         self.label_5.setText(label_text[:-2])
 
         #Print DATA_COLUMNS of selected Procedure to the according qtLabel
@@ -119,8 +117,16 @@ class SelectionWindow(Ui_SetupDialog):
             label_text += label + ", "
         self.label_7.setText(label_text[:-2])
 
-        #console output for debugging
-        print(self.selected_procedure)
+
+        #automatically select all required instruments that are connected
+        connected_instruments = [str(self.listWidget.item(i).text()) for i in range(self.listWidget.count())]
+        for connected in connected_instruments:
+            for required in self.selected_procedure.required_instruments:
+                if required in connected:
+                    position = connected_instruments.index(connected)
+                    self.listWidget.setCurrentItem(self.listWidget.item(position))
+                    self.update_instruments_dict()
+
 
     def make_procedures_dict(self):
         """Makes a dictionary NAME_OF_PROCEDURE:PROCEDURE_OBJECT from the string list procedures
