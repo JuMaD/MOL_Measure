@@ -148,7 +148,16 @@ class SelectionWindow(Ui_SetupDialog):
     def start_MeasureGUI(self):
         """Starts the specified GUI with the user selected Procedure and Instrument(s)"""
         if self.check_requirements():
-            self.window = self.window_class(procedure_class=self.selected_procedure)
+            procedure = self.selected_procedure()
+            dict = procedure.parameter_objects()
+            parameters = procedure.parameter_objects()
+
+            input_display = []
+            for key in dict.keys():
+                input_display.append(f'{key}')
+            print(input_display)
+
+            self.window = self.window_class(procedure_class=self.selected_procedure, inputs=input_display, displays=input_display)
             self.window.show()
 
 # Example Usage

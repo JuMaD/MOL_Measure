@@ -46,10 +46,11 @@ class IVCycles(ProcedureWithInstruments):
 
     #define required instruments
     required_instruments = ['Keithley Instruments Inc., Model 2635B']
+
     # define measurement paramters here
     averages = IntegerParameter('Averages', default=50)
     measurement_delay = FloatParameter('Measurement Delay', default=0.5)
-    max_voltage = FloatParameter('Maximum Voltage', units='V', default=1)
+    max_voltage = FloatParameter('Maximum Voltage', units='V', default=0.5)
     min_voltage = IntegerParameter('Minimum Voltage', units='V', default=-1.0)
     compliance = FloatParameter('Compliance', units='A', default=0.1)
     cycles = IntegerParameter('No. of Cycles', default=1)
