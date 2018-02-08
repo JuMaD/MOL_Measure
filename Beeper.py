@@ -20,7 +20,7 @@ class Beeper(object):
     """
 
     def __init__(self, tempo, adress):
-        self.adress = 'GPIB0::25::INSTR'
+        self.adress = adress
         self.tempo = tempo
         self._fullnotetime = int(60000/tempo)
         self.notes_dict = {"C":1, "CS":2, "DF":2, "D":3, "DS":4, "EF":4, "E":5, "FF":5, "F":6, "FS":7, "GF":7, "G":8, "GS":9, "AF":9, "A":10, "AS":11, "BF":11, "B":12,"BS":1, "CF":12, "P":0}
@@ -149,6 +149,17 @@ class Beeper(object):
     # predefined songs #
     ####################
 
+    def triad(self):
+        song = "3CQ3EQ3GQ"
+        self.play_song(song)
+
+    def successfull(self):
+        song = "3CQ3GQ"
+        self.play_song(song)
+
+    def failed(self):
+        song = "3GQ3CQ"
+        self.play_song(song)
     def play_tetris(self, length):
 
         song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ"
@@ -288,15 +299,7 @@ class Beeper(object):
 
 if __name__ == "__main__":
 
-    myBeep = Beeper(40)
-
-    myBeep.play_bigben()
-    #song = "3EQ2BE3CE3DQ3CE2BE2AQ2AE3CE3EQ3DE3CE2BQE3CE3DQ3EQ3CQ2AQ2AQ"
-    #myBeep.play_song(myBeep.transpose_octave(song,1))
-    #myBeep.play_bigben()
-    #for i in range(0,10):
-     #   myBeep.change_tempo(20)
-      #  song_transposed = myBeep.transpose_halftones(song2,-2*i)
-       # myBeep.play_song(song_transposed)
+    myBeep = Beeper(tempo=40, adress='GPIB0::26::INSTR')
+    myBeep.failed()
 
 
