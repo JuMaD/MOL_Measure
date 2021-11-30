@@ -5,7 +5,7 @@ Molel_measure runs on python 3.X and pymeasure, a package that contains a reposi
 (https://github.com/ralph-group/pymeasure)
 ## Supported Setups
 So far the following setups are supported by the software:
-    none
+    Keithley2635
 
 ## Contributors
 
